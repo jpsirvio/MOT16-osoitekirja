@@ -3,27 +3,20 @@ import { StyleSheet, Text, View, TextInput, Button, FlatList } from 'react-nativ
 import React, { useState, useEffect } from 'react';
 
 export default function App() {
-  const [first, setFirst] = useState('');
+  const [value, setValue] = useState('');
   const [second, setSecond] = useState('');
   const [sum, setSum] = useState(0);
   const [diff, setDiff] = useState(0);
   const [output, setOutput] = useState('');
-  const [history, setHistory] = useState([]);
+  const [list, setList] = useState([]);
 
-  const plusPressed = () => {
-    const newSum = parseInt(first) + parseInt(second);
-    setSum(newSum);
-    const calc = `${first} + ${second} = ${newSum}`;
-    setHistory([...history, calc]);
-    setOutput('Lukujen summa on ' + newSum);
+  const addPressed = () => {
+    setList([...list, value]);
+    setValue('')
   };
 
-  const minusPressed = () => {
-    const newDiff = parseInt(first) - parseInt(second);
-    setDiff(newDiff);
-    const calc = `${first} - ${second} = ${newDiff}`;
-    setHistory([...history, calc]);
-    setOutput('Lukujen erotus on ' + newDiff);
+  const clearPressed = () => {
+    setList([]);
   };
 
   return (
@@ -31,25 +24,17 @@ export default function App() {
       <Text>{output}</Text>
       <TextInput
         style={styles.input}
-        keyboardType='numeric'
-        onChangeText={setFirst}
-        value={first}
-        placeholder='syötä luku'
-      />
-      <TextInput
-        style={styles.input}
-        keyboardType='numeric'
-        onChangeText={setSecond}
-        value={second}
-        placeholder='syötä luku'
+        onChangeText={setValue}
+        value={value}
+        placeholder='add an item'
       />
       <View style={styles.button}>
-        <Button onPress={plusPressed} title='summaa' />
-        <Button onPress={minusPressed} title='erota' />
+        <Button onPress={addPressed} title='Add' />
+        <Button onPress={clearPressed} title='Clear' />
       </View>
       <View style={styles.list}>
-        <Text>Historia:</Text>
-        <FlatList data={history} renderItem={({ item }) => ( <Text>{item}</Text> )} keyExtractor={(item, index) => index.toString()} />
+        <Text>Shopping List:</Text>
+        <FlatList data={list} renderItem={({ item }) => ( <Text>{item}</Text> )} keyExtractor={(item, index) => index.toString()} />
       </View>
       <StatusBar style="auto" />
     </View>
@@ -78,5 +63,6 @@ const styles = StyleSheet.create({
   },
   list: {
     alignItems: 'center',
+    textDecorationStyle: 'double'
   },
 });
