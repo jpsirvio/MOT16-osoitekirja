@@ -1,42 +1,55 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, Platform, TextInput, Button, Alert } from 'react-native';
-import React, { useState, useEffect } from 'react'
+import { StyleSheet, Text, View, TextInput, Button, FlatList } from 'react-native';
+import React, { useState, useEffect } from 'react';
 
 export default function App() {
-  const [random, setRandom] = useState(Math.floor(Math.random() * 100) + 1);
-  const [test, setTest] = useState('');
+  const [first, setFirst] = useState('');
+  const [second, setSecond] = useState('');
+  const [sum, setSum] = useState(0);
   const [diff, setDiff] = useState(0);
-  const [counter, setCounter] = useState(0);
-  const [output, setOutput] = useState('Arvaa numero väliltä 1-100');
+  const [output, setOutput] = useState('');
+  const [history, setHistory] = useState([]);
 
-  useEffect(() => {
-    if (diff == 0 && counter == 0) {
-      setOutput('Arvaa numero väliltä 1-100');
-    } else if( diff > 0 ) {
-      setOutput('Your guess is ' + test + ' too high');  
-    } else if ( diff < 0 ) {
-      setOutput('Your guess is ' + test + ' too low');
-    } else if ( diff == 0 && counter > 0) {
-      setOutput('');
-      Alert.alert('You guessed the number in ' + counter + ' guesses')
-      setCounter(0)
-      setOutput('Arvaa numero väliltä 1-100');
-      setRandom(Math.floor(Math.random() * 100) + 1)
-    } 
-  }, [diff]);
+  const plusPressed = () => {
+    const newSum = parseInt(first) + parseInt(second);
+    setSum(newSum);
+    const calc = `${first} + ${second} = ${newSum}`;
+    setHistory([...history, calc]);
+    setOutput('Lukujen summa on ' + newSum);
+  };
 
-  const buttonPressed = () => {
-    setCounter(counter+1);
-    setDiff(parseInt(test) - random);
+  const minusPressed = () => {
+    const newDiff = parseInt(first) - parseInt(second);
+    setDiff(newDiff);
+    const calc = `${first} - ${second} = ${newDiff}`;
+    setHistory([...history, calc]);
+    setOutput('Lukujen erotus on ' + newDiff);
   };
 
   return (
     <View style={styles.container}>
-      
       <Text>{output}</Text>
-      <TextInput style={styles.input} keyboardType='numeric' onChangeText={test => setTest(test)} value={test} placeholder='syötä luku' />
+      <TextInput
+        style={styles.input}
+        keyboardType='numeric'
+        onChangeText={setFirst}
+        value={first}
+        placeholder='syötä luku'
+      />
+      <TextInput
+        style={styles.input}
+        keyboardType='numeric'
+        onChangeText={setSecond}
+        value={second}
+        placeholder='syötä luku'
+      />
       <View style={styles.button}>
-        <Button onPress={buttonPressed} title='Tee arvaus' />
+        <Button onPress={plusPressed} title='summaa' />
+        <Button onPress={minusPressed} title='erota' />
+      </View>
+      <View style={styles.list}>
+        <Text>Historia:</Text>
+        <FlatList data={history} renderItem={({ item }) => ( <Text>{item}</Text> )} keyExtractor={(item, index) => index.toString()} />
       </View>
       <StatusBar style="auto" />
     </View>
@@ -45,10 +58,11 @@ export default function App() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 4,
+    flex: 1,
     backgroundColor: '#eee',
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 100,
   },
   button: {
     flexDirection: 'row',
@@ -57,9 +71,12 @@ const styles = StyleSheet.create({
     margin: 20,
   },
   input: {
-    width: 100, 
-    borderColor: 'gray', 
-    borderWidth: 1, 
+    width: 100,
+    borderColor: 'gray',
+    borderWidth: 1,
     margin: 10,
-  }
+  },
+  list: {
+    alignItems: 'center',
+  },
 });
