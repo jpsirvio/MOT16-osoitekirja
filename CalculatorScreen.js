@@ -3,7 +3,6 @@ import { StyleSheet, Text, View, TextInput, Button } from 'react-native';
 import React, { useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 
-
 export default function CalculatorScreen({ navigation }) {
 
     const [first, setFirst] = useState('');
@@ -73,6 +72,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         margin: 20,
         padding: 5,
+        columnGap: 10,
     },
     input: {
         width: 100,
