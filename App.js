@@ -1,81 +1,111 @@
-import React, { useState } from 'react';
-import { Alert, StyleSheet, Text, View, Button, TextInput, FlatList, StatusBar, Image } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TextInput, Image } from 'react-native';
+import { API_URL, API_TOKEN } from '@env';
+import { Picker } from '@react-native-picker/picker';
 
 export default function App() {
-  const [keyword, setKeyword] = useState('');
-  const [repositories, setRepositories] = useState([]);
- 
-  const getRepositories = () => {
-    fetch(`https://www.themealdb.com/api/json/v1/1/filter.php?i=${keyword}`)
-    .then(response => {
-      //console.log(response.status); 
-      return response.json()
-    })
-    .then(data => setRepositories(data.meals))
-    .catch(error => { 
-        Alert.alert('Error', error); 
-    });
-  }
-  
-  const listSeparator = () => {
-    return (
-      <View
-        style={{
-          height: 2,
-          width: "100%",
-          backgroundColor: "gray",
-          marginTop: 1,
-          marginBottom: 1,
-        }}
-      />
-    );
+  const [data, setData] = useState([]);
+  const [selectedCurrency, setSelectedCurrency] = useState(null);
+  const [inputAmount, setInputAmount] = useState('');
+  const [convertedAmount, setConvertedAmount] = useState(null);
+
+  var myHeaders = new Headers();
+  myHeaders.append("apikey", API_TOKEN);
+
+  var requestOptions = {
+    method: 'GET',
+    redirect: 'follow',
+    headers: myHeaders
   };
+
+  useEffect(() => {
+    fetch(API_URL, requestOptions)
+      .then(response => response.json())
+      .then(result => setData(Object.entries(result.rates)))
+      .catch(error => console.log('error', error));
+  }, []);
+
+  const handleConversion = () => {
+    if (selectedCurrency && inputAmount !== '') {
+      const selectedRate = data.find(item => item[0] === selectedCurrency)[1];
+      const converted = (parseFloat(inputAmount) / selectedRate).toFixed(2);
+      setConvertedAmount(converted);
+    } else {
+      setConvertedAmount(null);
+    }
+  };
+
+  const imageUrl = 'https://publicdomainvectors.org/photos/coins_1.png';
 
   return (
     <View style={styles.container}>
-      <StatusBar hidden={true} />
-      <TextInput 
-        style={styles.input} 
-        placeholder='haettava ruoka-aine' 
-        value={keyword}
-        onChangeText={text => setKeyword(text)} 
-       />
-      <Button 
-      style={styles.button}
-        title="Hae reseptejä" onPress={getRepositories} 
-      />
-      <FlatList 
-        style={styles.list}
-        keyExtractor={(item, index) => index.toString()} 
-        renderItem={({item}) => 
-          <View>
-            <Text style={{fontSize: 18, fontWeight: "bold"}}>{item.strMeal}</Text>
-            <Image style={{width: 100, height: 100}} source={{uri: item.strMealThumb,}} />
-          </View>}
-        data={repositories} 
-        ItemSeparatorComponent={listSeparator} /> 
+      <Image source={{ uri: imageUrl }} style={styles.image} />
+
+      {convertedAmount !== null && (
+        <View style={styles.convertedAmount}>
+          <Text>{convertedAmount} EUR</Text>
+        </View>
+      )}
+
+      <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          placeholder="Syötä rahamäärä"
+          keyboardType="numeric"
+          value={inputAmount}
+          onChangeText={(text) => {
+            setInputAmount(text);
+            setConvertedAmount(null);
+          }}
+          onBlur={handleConversion}
+        />
+        <Picker
+          style={styles.picker}
+          selectedValue={selectedCurrency}
+          onValueChange={(itemValue) => {
+            setSelectedCurrency(itemValue);
+            setConvertedAmount(null);
+          }}
+        >
+          <Picker.Item label="Valitse valuutta" value={null} />
+          {data.map(item => (
+            <Picker.Item key={item[0]} label={item[0]} value={item[0]} />
+          ))}
+        </Picker>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
- container: {
-  flex: 1,
-  backgroundColor: '#fff',
-  paddingTop: 50,
-  alignItems: 'center',
-  justifyContent: 'center', 
- },
- input: {
-  fontSize: 12,
-  width: 200,
-  borderColor: 'gray',
-  borderWidth: 1,
-  paddingLeft: 5,
- },
- button: {
- },
- list: {
-  marginLeft : "5%",
- },
+  container: {
+    flex: 1,
+    paddingTop: 50,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginHorizontal: 10,
+    marginBottom: 10,
+  },
+  input: {
+    flex: 1,
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    padding: 5,
+  },
+  image: {
+    width: '100%',
+    height: 100,
+  },
+  convertedAmount: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    margin: 10,
+  },
+  picker: {
+    flex: 1,
+  },
 });
