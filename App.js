@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, TextInput, Button } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
+import * as Location from 'expo-location';
 import { MAPQUEST_API_KEY } from '@env';
 
 export default function App() {
@@ -35,6 +36,32 @@ export default function App() {
       console.error('Error fetching location:', error);
     }
   };
+
+  const getLocationAsync = async () => {
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      console.error('Permission to access location was denied');
+      return;
+    }
+    let location = await Location.getCurrentPositionAsync({});
+    const newRegion = {
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+      latitudeDelta: 0.00922,
+      longitudeDelta: 0.00421,
+    };
+    setMapRegion(newRegion);
+    setLocation({
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+    });
+    mapRef.current?.animateToRegion(newRegion, 1000);
+  };
+
+    // Use useEffect to run getLocationAsync when the component mounts
+    useEffect(() => {
+      getLocationAsync();
+    }, []); // The empty dependency array means it will only run once on mount  
 
   return (
     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
