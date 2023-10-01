@@ -1,97 +1,112 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, TextInput, Button } from 'react-native';
-import MapView, { Marker } from 'react-native-maps';
-import * as Location from 'expo-location';
-import { MAPQUEST_API_KEY } from '@env';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, Text, TextInput, View, Button, FlatList } from 'react-native';
+import * as SQLite from 'expo-sqlite';
+
+const db = SQLite.openDatabase('shoppinglistdb.db');
 
 export default function App() {
-  const [address, setAddress] = useState('');
-  const [location, setLocation] = useState(null);
-  const [mapRegion, setMapRegion] = useState(null);
-  const mapRef = useRef(null);
+  const [amount, setAmount] = useState('');
+  const [product, setProduct] = useState('');
+  const [shoppinglist, setShoppinglist] = useState([]);
 
-  const fetchLocation = async () => {
-    try {
-      const response = await fetch(
-        `https://www.mapquestapi.com/geocoding/v1/address?key=${MAPQUEST_API_KEY}&location=${address}`
-      );
-      if (!response.ok) {
-        console.error('API error');
-        return;
-      }
-      const data = await response.json();
-      if (data.results && data.results.length > 0) {
-        const { lat, lng } = data.results[0].locations[0].latLng;
-        const newRegion = {
-          latitude: lat,
-          longitude: lng,
-          latitudeDelta: 0.00922,
-          longitudeDelta: 0.00421,
-        };
-        setMapRegion(newRegion);
-        setLocation({ latitude: lat, longitude: lng });
-        mapRef.current?.animateToRegion(newRegion, 1000);
-      }
-    } catch (error) {
-      console.error('Error fetching location:', error);
-    }
-  };
+  // initialize database
+  useEffect(() => {
+    db.transaction(tx => {
+      tx.executeSql('create table if not exists shoppinglist (id integer primary key not null, amount text, product text);');
+    }, null, updateList); 
+  }, []);
 
-  const getLocationAsync = async () => {
-    let { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      console.error('Permission to access location was denied');
-      return;
-    }
-    let location = await Location.getCurrentPositionAsync({});
-    const newRegion = {
-      latitude: location.coords.latitude,
-      longitude: location.coords.longitude,
-      latitudeDelta: 0.00922,
-      longitudeDelta: 0.00421,
-    };
-    setMapRegion(newRegion);
-    setLocation({
-      latitude: location.coords.latitude,
-      longitude: location.coords.longitude,
+  // save item
+  const saveItem = () => {
+    db.transaction(tx => {
+        tx.executeSql('insert into shoppinglist (amount, product) values (?, ?);', [amount, product]);    
+      }, null, updateList
+    )
+  }
+
+  // update list
+  const updateList = () => {
+    db.transaction(tx => {
+      tx.executeSql('select * from shoppinglist;', [], (_, { rows }) =>
+        setShoppinglist(rows._array)
+      ); 
     });
-    mapRef.current?.animateToRegion(newRegion, 1000);
-  };
+  }
 
-    // Use useEffect to run getLocationAsync when the component mounts
-    useEffect(() => {
-      getLocationAsync();
-    }, []); // The empty dependency array means it will only run once on mount  
+  // delete item
+  const deleteItem = (id) => {
+    db.transaction(
+      tx => {
+        tx.executeSql(`delete from shoppinglist where id = ?;`, [id]);
+      }, null, updateList
+    )    
+  }
 
   return (
-    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-      <TextInput
-        style={{
-          width: 200,
-          height: 40,
-          borderColor: 'gray',
-          borderWidth: 1,
-          marginBottom: 10,
-        }}
-        placeholder="Syötä osoite"
-        onChangeText={(text) => setAddress(text)}
-      />
-      <Button title="Hae sijainti" onPress={fetchLocation} />
-      {location && (
-        <MapView
-          style={{ width: 300, height: 300, marginTop: 20 }}
-          initialRegion={mapRegion}
-          ref={mapRef}
-        >
-          <Marker
-            coordinate={{
-              latitude: location.latitude,
-              longitude: location.longitude,
-            }}
-            title="Marker"
-          />
-        </MapView>
-      )}
+    <View style={styles.container}>
+      <TextInput 
+        placeholder='Product' 
+        style={styles.productInput}
+        onChangeText={(product) => setProduct(product)}
+        value={product}/>  
+      <TextInput 
+        placeholder='Amount' 
+        style={styles.amountInput}
+        onChangeText={(amount) => setAmount(amount)}
+        value={amount}/>      
+      <Button onPress={saveItem} title="Save" /> 
+      <Text style={styles.listHeader}>Shopping List</Text>
+      <FlatList 
+        style={{marginLeft : "5%"}}
+        keyExtractor={item => item.id.toString()} 
+        renderItem={({item}) => 
+          <View style={styles.listcontainer}>
+            <Text style={styles.listText}>{item.product}, {item.amount}</Text>
+            <Text style={styles.listDelete} onPress={() => deleteItem(item.id)}> Bought</Text>
+        </View>} 
+        data={shoppinglist} 
+      />      
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 20,
+  },
+    productInput: {
+    marginTop: 30, 
+    fontSize: 18, 
+    width: 200, 
+    borderColor: 'gray', 
+    borderWidth: 1
+  },
+    amountInput: {
+    marginTop: 5, 
+    marginBottom: 5,  
+    fontSize: 18, 
+    width: 200, 
+    borderColor: 'gray', 
+    borderWidth: 1,
+  },
+    listHeader: {
+    marginTop: 20,
+    fontSize: 30,
+  },
+    listText: {
+    fontSize: 18
+  },
+  listDelete: {
+    fontSize: 18,
+    color: '#0000ff',
+  },
+  listcontainer: {
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    alignItems: 'center'
+  },
+});
