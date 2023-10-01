@@ -1,46 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, TextInput, View, Button, FlatList } from 'react-native';
-import * as SQLite from 'expo-sqlite';
+import { initializeApp } from 'firebase/app';
+import { getDatabase, push, ref, onValue, remove } from 'firebase/database';
 
-const db = SQLite.openDatabase('shoppinglistdb.db');
+const firebaseConfig = {
+  apiKey: "AIzaSyAkVR_YGhrzCN_vCcXiq-zqiv00tkWdBHI",
+  authDomain: "ostoslista-98989.firebaseapp.com",
+  projectId: "ostoslista-98989",
+  storageBucket: "ostoslista-98989.appspot.com",
+  messagingSenderId: "557457953751",
+  appId: "1:557457953751:web:d3ce359316aedbfbd87192"
+};
+
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
 
 export default function App() {
-  const [amount, setAmount] = useState('');
   const [product, setProduct] = useState('');
-  const [shoppinglist, setShoppinglist] = useState([]);
+  const [amount, setAmount] = useState('');
+  const [items, setItems] = useState([]);
 
-  // initialize database
   useEffect(() => {
-    db.transaction(tx => {
-      tx.executeSql('create table if not exists shoppinglist (id integer primary key not null, amount text, product text);');
-    }, null, updateList); 
-  }, []);
+    const itemsRef = ref(database, 'items/');
+    onValue(itemsRef, (snapshot) => {
+    const data = snapshot.val();
+    setItems(Object.values(data));
+  
+    const items = data ? Object.keys(data).map(key => ({key, ...data[key] })) : [];
+    setItems(items);
+    })
+    }, []);
 
-  // save item
   const saveItem = () => {
-    db.transaction(tx => {
-        tx.executeSql('insert into shoppinglist (amount, product) values (?, ?);', [amount, product]);    
-      }, null, updateList
-    )
-  }
+    push(
+      ref(database, 'items/'),
+      { 'product': product, 'amount': amount });
+      setProduct('');
+      setAmount(''); 
+  };
 
-  // update list
-  const updateList = () => {
-    db.transaction(tx => {
-      tx.executeSql('select * from shoppinglist;', [], (_, { rows }) =>
-        setShoppinglist(rows._array)
-      ); 
-    });
-  }
-
-  // delete item
-  const deleteItem = (id) => {
-    db.transaction(
-      tx => {
-        tx.executeSql(`delete from shoppinglist where id = ?;`, [id]);
-      }, null, updateList
-    )    
-  }
+  const deleteItem = (key) => {
+    remove(ref(database, 'items/' + key));
+  };
 
   return (
     <View style={styles.container}>
@@ -58,13 +59,15 @@ export default function App() {
       <Text style={styles.listHeader}>Shopping List</Text>
       <FlatList 
         style={{marginLeft : "5%"}}
-        keyExtractor={item => item.id.toString()} 
         renderItem={({item}) => 
           <View style={styles.listcontainer}>
             <Text style={styles.listText}>{item.product}, {item.amount}</Text>
-            <Text style={styles.listDelete} onPress={() => deleteItem(item.id)}> Bought</Text>
-        </View>} 
-        data={shoppinglist} 
+            <Text
+              style={styles.listDelete}
+              title="Bought"
+              onPress={() => deleteItem(item.key)}> Bought</Text>
+          </View>} 
+        data={items} 
       />      
     </View>
   );
@@ -98,15 +101,15 @@ const styles = StyleSheet.create({
     fontSize: 30,
   },
     listText: {
-    fontSize: 18
+    fontSize: 18,
   },
   listDelete: {
-    fontSize: 18,
-    color: '#0000ff',
+    fontSize: 14,
+    color: '#ff0000',
   },
   listcontainer: {
     flexDirection: 'row',
     backgroundColor: '#fff',
-    alignItems: 'center'
+    alignItems: 'center',
   },
 });
