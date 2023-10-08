@@ -1,74 +1,49 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, TextInput, View, Button, FlatList } from 'react-native';
-import { initializeApp } from 'firebase/app';
-import { getDatabase, push, ref, onValue, remove } from 'firebase/database';
-
-const firebaseConfig = {
-  apiKey: "AIzaSyAkVR_YGhrzCN_vCcXiq-zqiv00tkWdBHI",
-  authDomain: "ostoslista-98989.firebaseapp.com",
-  projectId: "ostoslista-98989",
-  storageBucket: "ostoslista-98989.appspot.com",
-  messagingSenderId: "557457953751",
-  appId: "1:557457953751:web:d3ce359316aedbfbd87192"
-};
-
-const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
+import React, { useState } from 'react';
+import { StyleSheet, Text, View, Button, FlatList } from 'react-native';
+import * as Contacts from 'expo-contacts';
 
 export default function App() {
-  const [product, setProduct] = useState('');
-  const [amount, setAmount] = useState('');
-  const [items, setItems] = useState([]);
+  const [contacts, setContacts] = useState([]);
 
-  useEffect(() => {
-    const itemsRef = ref(database, 'items/');
-    onValue(itemsRef, (snapshot) => {
-    const data = snapshot.val();
-    setItems(Object.values(data));
-  
-    const items = data ? Object.keys(data).map(key => ({key, ...data[key] })) : [];
-    setItems(items);
-    })
-    }, []);
+  const getContacts = async () => {
+    const { status } = await Contacts.requestPermissionsAsync();
 
-  const saveItem = () => {
-    push(
-      ref(database, 'items/'),
-      { 'product': product, 'amount': amount });
-      setProduct('');
-      setAmount(''); 
-  };
+    if (status === 'granted') {
+      const { data } = await Contacts.getContactsAsync({
+        fields: [Contacts.Fields.PhoneNumbers]
+      })
 
-  const deleteItem = (key) => {
-    remove(ref(database, 'items/' + key));
-  };
+      if (data.length > 0) {
+        const formattedContacts = data.map(contact => ({
+          id: contact.id,
+          firstName: contact.firstName || 'No First Name',
+          lastName: contact.lastName || 'No Last Name',
+          phoneNumber: contact.phoneNumbers?.length > 0
+            ? contact.phoneNumbers[0].number
+            : 'No phone number',
+        }));
+        setContacts(formattedContacts);
+      }
+    }
+  }
 
   return (
     <View style={styles.container}>
-      <TextInput 
-        placeholder='Product' 
-        style={styles.productInput}
-        onChangeText={(product) => setProduct(product)}
-        value={product}/>  
-      <TextInput 
-        placeholder='Amount' 
-        style={styles.amountInput}
-        onChangeText={(amount) => setAmount(amount)}
-        value={amount}/>      
-      <Button onPress={saveItem} title="Save" /> 
-      <Text style={styles.listHeader}>Shopping List</Text>
-      <FlatList 
-        style={{marginLeft : "5%"}}
-        renderItem={({item}) => 
-          <View style={styles.listcontainer}>
-            <Text style={styles.listText}>{item.product}, {item.amount}</Text>
-            <Text
-              style={styles.listDelete}
-              title="Bought"
-              onPress={() => deleteItem(item.key)}> Bought</Text>
-          </View>} 
-        data={items} 
-      />      
+      <Text style={styles.header}>My Contacts</Text>
+      <FlatList
+        style={styles.listContainer}
+        keyExtractor={item => item.id}
+        renderItem={({ item }) => (
+          <View style={styles.listItem}>
+            <Text style={styles.contactName}>
+              {item.firstName} {item.lastName}
+            </Text>
+            <Text style={styles.phoneNumber}>{item.phoneNumber}</Text>
+          </View>
+        )}
+        data={contacts}
+      />
+      <Button title="Get Contacts" onPress={getContacts} />
     </View>
   );
 }
@@ -78,38 +53,29 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     alignItems: 'center',
-    justifyContent: 'center',
+    padding: 16,
+  },
+  header: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 16,
     paddingTop: 20,
   },
-    productInput: {
-    marginTop: 30, 
-    fontSize: 18, 
-    width: 200, 
-    borderColor: 'gray', 
-    borderWidth: 1
+  listContainer: {
+    width: '100%',
   },
-    amountInput: {
-    marginTop: 5, 
-    marginBottom: 5,  
-    fontSize: 18, 
-    width: 200, 
-    borderColor: 'gray', 
-    borderWidth: 1,
+  listItem: {
+    backgroundColor: '#f0f0f0',
+    padding: 12,
+    marginVertical: 8,
+    borderRadius: 8,
   },
-    listHeader: {
-    marginTop: 20,
-    fontSize: 30,
-  },
-    listText: {
+  contactName: {
     fontSize: 18,
+    fontWeight: 'bold',
   },
-  listDelete: {
-    fontSize: 14,
-    color: '#ff0000',
-  },
-  listcontainer: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    alignItems: 'center',
+  phoneNumber: {
+    fontSize: 16,
+    color: '#333',
   },
 });
