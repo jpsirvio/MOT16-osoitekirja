@@ -1,49 +1,41 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, Button, FlatList } from 'react-native';
-import * as Contacts from 'expo-contacts';
+import { StyleSheet, Text, View, Button, TextInput } from 'react-native';
+import * as Speech from 'expo-speech';
 
 export default function App() {
-  const [contacts, setContacts] = useState([]);
+  const [text, setText] = useState('');
 
-  const getContacts = async () => {
-    const { status } = await Contacts.requestPermissionsAsync();
+  //const getAvailableVoices = async () => {
+  //  const voices = await Speech.getAvailableVoicesAsync();
+  //};
 
-    if (status === 'granted') {
-      const { data } = await Contacts.getContactsAsync({
-        fields: [Contacts.Fields.PhoneNumbers]
-      })
-
-      if (data.length > 0) {
-        const formattedContacts = data.map(contact => ({
-          id: contact.id,
-          firstName: contact.firstName || 'No First Name',
-          lastName: contact.lastName || 'No Last Name',
-          phoneNumber: contact.phoneNumbers?.length > 0
-            ? contact.phoneNumbers[0].number
-            : 'No phone number',
-        }));
-        setContacts(formattedContacts);
-      }
+  const speak = () => {
+    //getAvailableVoices();
+    if (text.trim() !== '') {
+      const voiceOptions = {
+        language: 'fi-FI', // Set the desired language and region
+      };
+      Speech.speak(text, voiceOptions);
     }
-  }
+  };
+
+  const clearText = () => {
+    setText('');
+  };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>My Contacts</Text>
-      <FlatList
-        style={styles.listContainer}
-        keyExtractor={item => item.id}
-        renderItem={({ item }) => (
-          <View style={styles.listItem}>
-            <Text style={styles.contactName}>
-              {item.firstName} {item.lastName}
-            </Text>
-            <Text style={styles.phoneNumber}>{item.phoneNumber}</Text>
-          </View>
-        )}
-        data={contacts}
+      <Text style={styles.title}>Text-to-Speech App</Text>
+      <TextInput
+        style={styles.textInput}
+        placeholder="Enter text here"
+        onChangeText={(text) => setText(text)}
+        value={text}
       />
-      <Button title="Get Contacts" onPress={getContacts} />
+      <View style={styles.buttonContainer}>
+        <Button title="Speak" onPress={speak} />
+        <Button title="Clear Text" onPress={clearText} />
+      </View>
     </View>
   );
 }
@@ -53,29 +45,25 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     alignItems: 'center',
+    justifyContent: 'center',
     padding: 16,
   },
-  header: {
+  title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 16,
-    paddingTop: 20,
+    marginBottom: 20,
   },
-  listContainer: {
-    width: '100%',
+  textInput: {
+    width: '80%',
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    marginBottom: 20,
+    paddingLeft: 10,
   },
-  listItem: {
-    backgroundColor: '#f0f0f0',
-    padding: 12,
-    marginVertical: 8,
-    borderRadius: 8,
-  },
-  contactName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  phoneNumber: {
-    fontSize: 16,
-    color: '#333',
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '50%',
   },
 });
